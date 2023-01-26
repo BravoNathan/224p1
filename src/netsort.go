@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -86,18 +85,21 @@ func main() {
 	// create map to store arranged data before sending
 	map_data := make(map[int][]KVpair)
 	server_bits_number := PowerOfTwo(len(scs.Servers))
-	fmt.Printf("server_bits_number: %d \n", server_bits_number)
+	// fmt.Printf("server_bits_number: %d \n", server_bits_number)
 	arrangingLocalData(inputfile, map_data, server_bits_number)
 
 	listener, err := net.Listen("tcp", service)
-	checkError(err)
+	if err != nil {
+		log.Fatal("Listening Error: ", err.Error())
+		os.Exit(1)
+	}
 	defer listener.Close()
 
 	var mutex sync.Mutex
 	var wg_server sync.WaitGroup
 	wg_server.Add(len(scs.Servers))
 
-	fmt.Println("Before Wait")
+	// fmt.Println("Before Wait")
 	go func() {
 
 		defer wg_server.Done()
@@ -120,23 +122,22 @@ func main() {
 			for err != nil {
 				time.Sleep(time.Duration(50) * time.Microsecond)
 				conn, err = net.Dial("tcp", other_server)
-				checkError(err)
 			}
 			defer conn.Close()
-			fmt.Printf("Length of map: %d \n", len(map_data[other_server_id]))
+			// fmt.Printf("Length of map: %d \n", len(map_data[other_server_id]))
 			sendingData(conn, map_data[other_server_id])
 		}()
 	}
 	wg_server.Wait()
-	fmt.Printf("After Wait, %d \n", len(receivedList))
+	// fmt.Printf("After Wait, %d \n", len(receivedList))
 
 	for _, message := range map_data[serverId] {
 		receivedList = append(receivedList, message)
 	}
-	fmt.Printf("--------------Length of receivedList: %d \n", len(receivedList))
+	// fmt.Printf("--------------Length of receivedList: %d \n", len(receivedList))
 	//process the message we got
 	sortTheMessages(receivedList, outputfile)
-	fmt.Println("chai zhiyuan")
+	fmt.Printf("-------Server %s Ending------ \n", os.Args[1])
 }
 
 func checkError(err error) {
@@ -147,7 +148,9 @@ func checkError(err error) {
 
 func arrangingLocalData(inputfile string, map_data map[int][]KVpair, server_bits int) {
 	f, err := os.Open(inputfile)
-	checkError(err)
+	if err != nil {
+		log.Fatalln("Fatal error: openFile")
+	}
 	defer f.Close()
 
 	for {
@@ -157,7 +160,6 @@ func arrangingLocalData(inputfile string, map_data map[int][]KVpair, server_bits
 			if err == io.EOF {
 				break
 			}
-			checkError(err)
 		}
 		client_number := extractBits(msg_buf, server_bits)
 		var kv KVpair
@@ -225,11 +227,11 @@ func receivingData(conn net.Conn, mutex sync.Mutex) {
 		var kvpair KVpair
 		kvpair.Key = append(kvpair.Key, message[:10]...)
 		kvpair.Value = append(kvpair.Value, message[10:100]...)
-		fmt.Printf("Client number: %s, received: %s \n", os.Args[1], hex.EncodeToString(kvpair.Key))
+		// fmt.Printf("Client number: %s, received: %s \n", os.Args[1], hex.EncodeToString(kvpair.Key))
 
 		mutex.Lock()
 		receivedList = append(receivedList, kvpair)
-		fmt.Printf("After receiving, length of receivedList: %d \n", len(receivedList))
+		// fmt.Printf("After receiving, length of receivedList: %d \n", len(receivedList))
 		mutex.Unlock()
 		conn.Read(isValid)
 	}

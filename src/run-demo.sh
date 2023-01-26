@@ -7,7 +7,7 @@ rm -f netsort
 go build -o netsort netsort.go
 
 ##Run for process
-for i in $(seq 0 3)
+for i in $(seq 0 15)
 do
   SERVER_ID=$i
   INPUT_FILE_PATH='testcases/testcase1/input-'${SERVER_ID}'.dat'
